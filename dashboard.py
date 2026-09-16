@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import dash
+import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -388,4 +389,4 @@ def stats_tab():
 
 
 if __name__ == "__main__":
-    app.run(debug=False, port=8055)
+    app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 8055)))
