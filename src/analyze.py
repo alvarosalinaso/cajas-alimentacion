@@ -2,21 +2,23 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score, davies_bouldin_score
 
 BASE = Path(__file__).parent.parent
 
 
-def analyze():
+def analyze() -> dict[str, Any] | None:
     csv_path = BASE / "data" / "raw" / "coordinates.csv"
     if not csv_path.exists():
         return None
 
     df = pd.read_csv(csv_path)
-    n_clusters = min(10, len(df) // 100)
+    n_clusters = max(1, min(10, len(df) // 100))
 
     kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
     df["cluster"] = kmeans.fit_predict(df[["lat", "lon"]])
@@ -40,6 +42,26 @@ def analyze():
             "count": len(cluster_df),
         })
 
+    # Clustering quality metrics (sample for performance on large datasets)
+    cluster_metrics = {}
+    if n_clusters > 1 and len(df) > n_clusters:
+        try:
+            coords = df[["lat", "lon"]].values
+            labels = df["cluster"].values
+            # Use sample for metrics on large datasets for performance
+            if len(df) > 5000:
+                sample_idx = np.random.choice(len(df), 5000, replace=False)
+                coords_sample = coords[sample_idx]
+                labels_sample = labels[sample_idx]
+            else:
+                coords_sample = coords
+                labels_sample = labels
+            cluster_metrics["silhouette_score"] = round(silhouette_score(coords_sample, labels_sample), 4)
+            cluster_metrics["davies_bouldin_score"] = round(davies_bouldin_score(coords_sample, labels_sample), 4)
+            cluster_metrics["inertia"] = round(kmeans.inertia_, 2)
+        except Exception:
+            cluster_metrics["error"] = "Could not compute clustering metrics"
+
     grid_density = df.groupby("grid_id").agg(
         lat=("lat", "mean"), lon=("lon", "mean"), count=("lat", "count")
     ).reset_index().sort_values("count", ascending=False)
@@ -49,6 +71,7 @@ def analyze():
         "clusters": sorted(centroids, key=lambda x: -x["count"]),
         "grid_density": grid_density.head(20).to_dict("records"),
         "n_grid_cells": len(grid_density),
+        "cluster_metrics": cluster_metrics,
     }
 
     output = BASE / "data" / "export" / "delivery_stats.json"

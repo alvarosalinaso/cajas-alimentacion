@@ -76,7 +76,7 @@ def haring_card(title, children):
     )
 
 
-def kpi_box(value, label, color, index):
+def kpi_box(value, label, color):
     return html.Div(
         style={
             "flex": "1",
@@ -121,8 +121,8 @@ def stat_row(stats):
     return html.Div(
         style={"display": "flex", "gap": "16px", "flexWrap": "wrap", "marginBottom": "25px"},
         children=[
-            kpi_box(val, label, color, i)
-            for i, (val, label, color) in enumerate(stats)
+            kpi_box(val, label, color)
+            for val, label, color in stats
         ],
     )
 
@@ -192,7 +192,7 @@ app.layout = html.Div(
                     "letterSpacing": "3px",
                     "textTransform": "uppercase",
                 }),
-                html.P("✦ 80,595 puntos de entrega — Santiago ✦", style={
+                html.P(id="header-stats", style={
                     "color": HARING_COLORS["black"],
                     "marginTop": "10px",
                     "fontSize": "1.1rem",
@@ -229,15 +229,26 @@ def render_tab(tab):
     return funcs.get(tab, map_tab)()
 
 
+@callback(Output("header-stats", "children"), Input("tabs", "value"))
+def update_header_stats(_tab):
+    if "raw" not in DATA:
+        return "Sin datos"
+    df = DATA.get("analysis", DATA["raw"])
+    total = len(df)
+    return f"✦ {total:,} puntos de entrega — Santiago ✦"
+
+
 def map_tab():
     df = DATA.get("analysis", DATA["raw"])
     if "cluster" not in df.columns:
         df["cluster"] = 0
+    # Optimización: downsample para visualización si hay muchos puntos
+    display_df = df.sample(n=min(15000, len(df)), random_state=42) if len(df) > 15000 else df
     fig = px.scatter_mapbox(
-        df, lat="lat", lon="lon", color="cluster",
+        display_df, lat="lat", lon="lon", color="cluster",
         center={"lat": -33.45, "lon": -70.66}, zoom=11,
         mapbox_style="carto-positron",
-        title=f"MAPA DE ENTREGAS — {len(df):,} PUNTOS",
+        title=f"MAPA DE ENTREGAS — {len(df):,} PUNTOS (mostrando {len(display_df):,})",
         color_discrete_sequence=CHART_COLORS,
     )
     fig.update_layout(
@@ -248,7 +259,7 @@ def map_tab():
         margin=dict(t=0, b=0),
         font=dict(family=FONT, color=HARING_COLORS["black"], size=14),
     )
-    fig.update_traces(marker=dict(size=10, line=dict(width=2, color=HARING_COLORS["black"])))
+    fig.update_traces(marker=dict(size=6, line=dict(width=1, color=HARING_COLORS["black"])))
     return haring_card("MAPA DE ENTREGAS", dcc.Graph(figure=fig))
 
 
