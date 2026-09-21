@@ -53,7 +53,7 @@ def test_analyze_returns_dict():
 def test_analyze_returns_expected_keys():
     result = analyze()
     assert result is not None
-    expected_keys = {"total_deliveries", "clusters", "grid_density", "n_grid_cells"}
+    expected_keys = {"total_deliveries", "clusters", "grid_density", "n_grid_cells", "cluster_metrics"}
     assert expected_keys == set(result.keys())
 
 

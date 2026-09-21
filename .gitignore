@@ -2,5 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 data/export/
+data/processed/
+data/raw/
 *.egg-info/
 .pytest_cache/
