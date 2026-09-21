@@ -293,7 +293,7 @@ def map_tab():
     )
     fig.update_traces(
         marker=dict(size=6, line=dict(width=1, color=HARING_COLORS["black"])),
-        hovertemplate="Cluster %{marker.color}<br>%{lat:.4f}°, %{lon:.4f}°<extra>" + f"{len(df):,} puntos totales</extra>",
+        hovertemplate="%{lat:.4f}°, %{lon:.4f}°<br>" + f"{len(df):,} puntos totales<extra></extra>",
     )
     top_cluster = int(df["cluster"].value_counts().index[0]) if "cluster" in df.columns and len(df) else 0
     return html.Div(children=[
