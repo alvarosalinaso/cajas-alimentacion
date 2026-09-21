@@ -7,7 +7,7 @@ import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from dash import Input, Output, callback, dcc, html
+from dash import Input, Output, callback, dcc, html, no_update
 
 app = dash.Dash(
     __name__,
@@ -117,6 +117,33 @@ def kpi_box(value, label, color):
     )
 
 
+def sparkline(values, color="#ff0000"):
+    if not values or len(values) < 2:
+        return html.Div(style={"height": "32px"})
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        y=list(values), mode="lines",
+        line={"color": color, "width": 3, "shape": "spline"},
+        fill="tozeroy", hoverinfo="skip", showlegend=False,
+    ))
+    fig.update_layout(
+        margin={"t": 0, "b": 0, "l": 0, "r": 0},
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        xaxis={"visible": False}, yaxis={"visible": False}, height=32,
+    )
+    return dcc.Graph(figure=fig, config={"displayModeBar": False}, style={"height": "32px"})
+
+
+def insight_card(question, answer, accent="#ff0000"):
+    return html.Div(
+        style={"backgroundColor": "#ffffff", "border": "4px solid #000000", "borderLeft": f"10px solid {accent}", "padding": "14px 16px", "marginBottom": "12px"},
+        children=[
+            html.Div(question, style={"fontWeight": "900", "textTransform": "uppercase", "fontSize": "0.75rem", "letterSpacing": "0.06em", "fontFamily": FONT}),
+            html.Div(answer, style={"marginTop": "4px", "fontFamily": FONT, "lineHeight": "1.5"}),
+        ],
+    )
+
+
 def stat_row(stats):
     return html.Div(
         style={"display": "flex", "gap": "16px", "flexWrap": "wrap", "marginBottom": "25px"},
@@ -199,6 +226,11 @@ app.layout = html.Div(
                     "fontWeight": "700",
                     "fontFamily": FONT,
                 }),
+                html.Div(style={"display": "flex", "justifyContent": "center", "gap": "10px", "marginTop": "12px"}, children=[
+                    html.Div(style={"width": "44px", "height": "44px", "borderRadius": "50%", "backgroundColor": HARING_COLORS["red"], "border": f"3px solid {HARING_COLORS['black']}"}),
+                    html.Div(style={"width": "44px", "height": "44px", "backgroundColor": HARING_COLORS["blue"], "border": f"3px solid {HARING_COLORS['black']}"}),
+                    html.Div(style={"width": "0", "height": "0", "borderLeft": "26px solid transparent", "borderRight": "26px solid transparent", "borderBottom": f"44px solid {HARING_COLORS['yellow']}"}),
+                ]),
             ],
         ),
         dcc.Tabs(
@@ -259,8 +291,20 @@ def map_tab():
         margin=dict(t=0, b=0),
         font=dict(family=FONT, color=HARING_COLORS["black"], size=14),
     )
-    fig.update_traces(marker=dict(size=6, line=dict(width=1, color=HARING_COLORS["black"])))
-    return haring_card("MAPA DE ENTREGAS", dcc.Graph(figure=fig))
+    fig.update_traces(
+        marker=dict(size=6, line=dict(width=1, color=HARING_COLORS["black"])),
+        hovertemplate="Cluster %{marker.color}<br>%{lat:.4f}°, %{lon:.4f}°<extra>" + f"{len(df):,} puntos totales</extra>",
+    )
+    top_cluster = int(df["cluster"].value_counts().index[0]) if "cluster" in df.columns and len(df) else 0
+    return html.Div(children=[
+        haring_card("KEY INSIGHTS", html.Div(children=[
+            insight_card("¿Problema?", f"{len(df):,} entregas sin zonificación visible para rutas.", HARING_COLORS["red"]),
+            insight_card("¿Metodología?", f"KMeans + grilla 0.01°; cluster dominante #{top_cluster} concentra la demanda.", HARING_COLORS["blue"]),
+            insight_card("¿Decisión?", "Clic en barras de Clusters para aislar la zona y reasignar flota.", HARING_COLORS["green"]),
+            sparkline(df["cluster"].value_counts().sort_index().values.tolist(), HARING_COLORS["red"]),
+        ])),
+        haring_card("MAPA DE ENTREGAS", dcc.Graph(figure=fig)),
+    ])
 
 
 def density_tab():
@@ -335,7 +379,7 @@ def clusters_tab():
     clusters = stats.get("clusters", [])
     if clusters:
         cdf = pd.DataFrame(clusters)
-        fig_bar = px.bar(cdf, x="id", y="count", title="ENTREGAS POR CLUSTER",
+        fig_bar = px.bar(cdf, x="id", y="count", title="ENTREGAS POR CLUSTER — clic para filtrar",
                          color_discrete_sequence=[HARING_COLORS["blue"]])
         fig_bar.update_layout(
             template="plotly_white",
@@ -347,12 +391,28 @@ def clusters_tab():
         fig_bar.update_traces(
             marker_color=HARING_COLORS["blue"],
             marker_line=dict(width=3, color=HARING_COLORS["black"]),
+            hovertemplate="<b>Cluster %{x}</b><br>Entregas: %{y}<extra></extra>",
         )
         return html.Div([
             haring_card("CLUSTERS", dcc.Graph(figure=fig_scatter)),
-            haring_card("DISTRIBUCIÓN POR CLUSTER", dcc.Graph(figure=fig_bar)),
+            haring_card("DISTRIBUCIÓN POR CLUSTER", html.Div(children=[
+                dcc.Graph(id="cluster-bar", figure=fig_bar),
+                html.Div(id="cluster-crossfilter-output", style={"marginTop": "8px", "fontWeight": "800", "fontFamily": FONT}),
+            ])),
         ])
     return haring_card("CLUSTERS", dcc.Graph(figure=fig_scatter))
+
+
+@callback(
+    Output("cluster-crossfilter-output", "children"),
+    Input("cluster-bar", "clickData"),
+    prevent_initial_call=True,
+)
+def cluster_crossfilter(click):
+    if not click:
+        return no_update
+    c = click["points"][0].get("x", "?")
+    return f"Cluster seleccionado: {c} — usa el tab Mapa con ese cluster para planificar rutas."
 
 
 def stats_tab():
