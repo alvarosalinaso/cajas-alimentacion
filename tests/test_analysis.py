@@ -45,12 +45,16 @@ def analysis_df():
 
 
 def test_analyze_returns_dict():
+    if not RAW_CSV.exists():
+        pytest.skip("coordinates.csv not found")
     result = analyze()
     assert result is not None
     assert isinstance(result, dict)
 
 
 def test_analyze_returns_expected_keys():
+    if not RAW_CSV.exists():
+        pytest.skip("coordinates.csv not found")
     result = analyze()
     assert result is not None
     expected_keys = {
@@ -64,6 +68,8 @@ def test_analyze_returns_expected_keys():
 
 
 def test_cluster_count():
+    if not RAW_CSV.exists():
+        pytest.skip("coordinates.csv not found")
     result = analyze()
     assert result is not None
     assert len(result["clusters"]) == 10
