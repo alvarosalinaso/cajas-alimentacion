@@ -276,10 +276,10 @@ def map_tab():
         df["cluster"] = 0
     # Optimización: downsample para visualización si hay muchos puntos
     display_df = df.sample(n=min(15000, len(df)), random_state=42) if len(df) > 15000 else df
-    fig = px.scatter_mapbox(
+    fig = px.scatter_map(
         display_df, lat="lat", lon="lon", color="cluster",
         center={"lat": -33.45, "lon": -70.66}, zoom=11,
-        mapbox_style="carto-positron",
+        map_style="carto-positron",
         title=f"MAPA DE ENTREGAS — {len(df):,} PUNTOS (mostrando {len(display_df):,})",
         color_discrete_sequence=CHART_COLORS,
     )
@@ -292,7 +292,7 @@ def map_tab():
         font=dict(family=FONT, color=HARING_COLORS["black"], size=14),
     )
     fig.update_traces(
-        marker=dict(size=6, line=dict(width=1, color=HARING_COLORS["black"])),
+        marker=dict(size=6),
         hovertemplate="%{lat:.4f}°, %{lon:.4f}°<br>" + f"{len(df):,} puntos totales<extra></extra>",
     )
     top_cluster = int(df["cluster"].value_counts().index[0]) if "cluster" in df.columns and len(df) else 0
@@ -309,10 +309,10 @@ def map_tab():
 
 def density_tab():
     df = DATA.get("analysis", DATA["raw"])
-    fig_density = px.density_mapbox(
+    fig_density = px.density_map(
         df, lat="lat", lon="lon", radius=8,
         center={"lat": -33.45, "lon": -70.66}, zoom=11,
-        mapbox_style="carto-positron",
+        map_style="carto-positron",
         title="MAPA DE DENSIDAD",
         color_continuous_scale=[
             [0, HARING_COLORS["white"]],
@@ -348,9 +348,39 @@ def density_tab():
         )
     else:
         fig_bar = go.Figure()
+    sample = df.sample(n=min(8000, len(df)), random_state=7) if len(df) > 8000 else df
+    fig_contour = px.density_contour(
+        sample, x="lon", y="lat",
+        title="ARTE DE DENSIDAD — curvas de entrega",
+    )
+    fig_contour.update_layout(
+        template="plotly_white",
+        paper_bgcolor=HARING_COLORS["white"],
+        plot_bgcolor=HARING_COLORS["white"],
+        height=500,
+        font=dict(family=FONT, color=HARING_COLORS["black"]),
+        xaxis_title="Longitud",
+        yaxis_title="Latitud",
+    )
+    fig_contour.update_traces(
+        contours_coloring="fill",
+        colorscale=[
+            [0, HARING_COLORS["white"]],
+            [0.35, HARING_COLORS["yellow"]],
+            [0.65, HARING_COLORS["red"]],
+            [1, HARING_COLORS["black"]],
+        ],
+        contours=dict(showlabels=True, labelfont=dict(size=11, color=HARING_COLORS["black"])),
+        hovertemplate="Lon: %{x:.4f}<br>Lat: %{y:.4f}<br>Densidad: %{z:.0f}<extra></extra>",
+    )
     return html.Div([
         haring_card("MAPA DE DENSIDAD", dcc.Graph(figure=fig_density)),
         haring_card("TOP 10 ZONAS", dcc.Graph(figure=fig_bar)),
+        haring_card("DENSIDAD COMO ARTE — contornos", html.Div(children=[
+            dcc.Graph(figure=fig_contour),
+            html.Div("Insight: los anillos concéntricos marcan los focos donde se acumula la demanda; ahí van las rutas prioritarias.",
+                     style={"fontWeight": "700", "fontFamily": FONT, "marginTop": "8px"}),
+        ])),
     ])
 
 
