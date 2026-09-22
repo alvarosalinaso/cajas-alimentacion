@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score, davies_bouldin_score
+from sklearn.metrics import davies_bouldin_score, silhouette_score
 
 BASE = Path(__file__).parent.parent
 
@@ -35,12 +35,14 @@ def analyze() -> dict[str, Any] | None:
     centroids = []
     for c in range(n_clusters):
         cluster_df = df[df["cluster"] == c]
-        centroids.append({
-            "id": c,
-            "centroid_lat": round(float(cluster_df["lat"].mean()), 6),
-            "centroid_lon": round(float(cluster_df["lon"].mean()), 6),
-            "count": len(cluster_df),
-        })
+        centroids.append(
+            {
+                "id": c,
+                "centroid_lat": round(float(cluster_df["lat"].mean()), 6),
+                "centroid_lon": round(float(cluster_df["lon"].mean()), 6),
+                "count": len(cluster_df),
+            }
+        )
 
     # Clustering quality metrics (sample for performance on large datasets)
     cluster_metrics = {}
@@ -56,15 +58,22 @@ def analyze() -> dict[str, Any] | None:
             else:
                 coords_sample = coords
                 labels_sample = labels
-            cluster_metrics["silhouette_score"] = round(silhouette_score(coords_sample, labels_sample), 4)
-            cluster_metrics["davies_bouldin_score"] = round(davies_bouldin_score(coords_sample, labels_sample), 4)
+            cluster_metrics["silhouette_score"] = round(
+                silhouette_score(coords_sample, labels_sample), 4
+            )
+            cluster_metrics["davies_bouldin_score"] = round(
+                davies_bouldin_score(coords_sample, labels_sample), 4
+            )
             cluster_metrics["inertia"] = round(kmeans.inertia_, 2)
         except Exception:
             cluster_metrics["error"] = "Could not compute clustering metrics"
 
-    grid_density = df.groupby("grid_id").agg(
-        lat=("lat", "mean"), lon=("lon", "mean"), count=("lat", "count")
-    ).reset_index().sort_values("count", ascending=False)
+    grid_density = (
+        df.groupby("grid_id")
+        .agg(lat=("lat", "mean"), lon=("lon", "mean"), count=("lat", "count"))
+        .reset_index()
+        .sort_values("count", ascending=False)
+    )
 
     stats = {
         "total_deliveries": len(df),

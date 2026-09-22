@@ -1,9 +1,8 @@
 """Tests for analyze module (cajas-alimentacion)."""
 
 import json
+
 import pandas as pd
-from pathlib import Path
-import pytest
 
 from src.analyze import analyze
 
@@ -11,16 +10,19 @@ from src.analyze import analyze
 def test_analyze_returns_dict(tmp_path, monkeypatch):
     """Test that analyze returns a dict with expected structure."""
     import src.analyze as analyze_module
+
     monkeypatch.setattr(analyze_module, "BASE", tmp_path)
 
     data_raw = tmp_path / "data" / "raw"
     data_raw.mkdir(parents=True)
 
     # Create coordinates.csv with test data
-    coords_data = pd.DataFrame({
-        "lat": [-33.45, -33.46, -33.44, -33.47, -33.43] * 20,  # 100 points
-        "lon": [-70.65, -70.66, -70.64, -70.67, -70.63] * 20,
-    })
+    coords_data = pd.DataFrame(
+        {
+            "lat": [-33.45, -33.46, -33.44, -33.47, -33.43] * 20,  # 100 points
+            "lon": [-70.65, -70.66, -70.64, -70.67, -70.63] * 20,
+        }
+    )
     coords_data.to_csv(data_raw / "coordinates.csv", index=False)
 
     result = analyze()
@@ -35,6 +37,7 @@ def test_analyze_returns_dict(tmp_path, monkeypatch):
 def test_analyze_no_data(tmp_path, monkeypatch):
     """Test analyze with no coordinates.csv returns None."""
     import src.analyze as analyze_module
+
     monkeypatch.setattr(analyze_module, "BASE", tmp_path)
 
     result = analyze()
@@ -44,18 +47,21 @@ def test_analyze_no_data(tmp_path, monkeypatch):
 def test_analyze_creates_output_files(tmp_path, monkeypatch):
     """Test that analyze creates output files."""
     import src.analyze as analyze_module
+
     monkeypatch.setattr(analyze_module, "BASE", tmp_path)
 
     data_raw = tmp_path / "data" / "raw"
     data_raw.mkdir(parents=True)
 
-    coords_data = pd.DataFrame({
-        "lat": [-33.45, -33.46, -33.44],
-        "lon": [-70.65, -70.66, -70.64],
-    })
+    coords_data = pd.DataFrame(
+        {
+            "lat": [-33.45, -33.46, -33.44],
+            "lon": [-70.65, -70.66, -70.64],
+        }
+    )
     coords_data.to_csv(data_raw / "coordinates.csv", index=False)
 
-    result = analyze()
+    analyze()
 
     # Check processed file
     processed_file = tmp_path / "data" / "processed" / "delivery_analysis.csv"
@@ -75,6 +81,7 @@ def test_analyze_creates_output_files(tmp_path, monkeypatch):
 def test_analyze_cluster_count(tmp_path, monkeypatch):
     """Test that cluster count is correct (min(10, n//100))."""
     import src.analyze as analyze_module
+
     monkeypatch.setattr(analyze_module, "BASE", tmp_path)
 
     data_raw = tmp_path / "data" / "raw"
@@ -82,10 +89,12 @@ def test_analyze_cluster_count(tmp_path, monkeypatch):
 
     # 50 points -> min(10, 50//100) = min(10, 0) = 0, but KMeans needs >=1
     # Let's use 150 points -> min(10, 150//100) = 1
-    coords_data = pd.DataFrame({
-        "lat": [-33.45 + i * 0.001 for i in range(150)],
-        "lon": [-70.65 + i * 0.001 for i in range(150)],
-    })
+    coords_data = pd.DataFrame(
+        {
+            "lat": [-33.45 + i * 0.001 for i in range(150)],
+            "lon": [-70.65 + i * 0.001 for i in range(150)],
+        }
+    )
     coords_data.to_csv(data_raw / "coordinates.csv", index=False)
 
     result = analyze()
@@ -95,15 +104,18 @@ def test_analyze_cluster_count(tmp_path, monkeypatch):
 def test_analyze_grid_density_structure(tmp_path, monkeypatch):
     """Test grid density output structure."""
     import src.analyze as analyze_module
+
     monkeypatch.setattr(analyze_module, "BASE", tmp_path)
 
     data_raw = tmp_path / "data" / "raw"
     data_raw.mkdir(parents=True)
 
-    coords_data = pd.DataFrame({
-        "lat": [-33.45, -33.45, -33.46],
-        "lon": [-70.65, -70.65, -70.66],
-    })
+    coords_data = pd.DataFrame(
+        {
+            "lat": [-33.45, -33.45, -33.46],
+            "lon": [-70.65, -70.65, -70.66],
+        }
+    )
     coords_data.to_csv(data_raw / "coordinates.csv", index=False)
 
     result = analyze()
@@ -119,6 +131,7 @@ def test_analyze_grid_density_structure(tmp_path, monkeypatch):
 def test_analyze_cluster_quality(tmp_path, monkeypatch):
     """Test cluster quality metrics (inertia, separation)."""
     import src.analyze as analyze_module
+
     monkeypatch.setattr(analyze_module, "BASE", tmp_path)
 
     data_raw = tmp_path / "data" / "raw"
@@ -126,6 +139,7 @@ def test_analyze_cluster_quality(tmp_path, monkeypatch):
 
     # Create well-separated clusters
     import numpy as np
+
     np.random.seed(42)
     cluster1 = np.random.normal([-33.45, -70.65], 0.001, (100, 2))
     cluster2 = np.random.normal([-33.47, -70.67], 0.001, (100, 2))
@@ -135,7 +149,7 @@ def test_analyze_cluster_quality(tmp_path, monkeypatch):
     result = analyze()
     clusters = result["clusters"]
     assert len(clusters) >= 2  # Should find at least 2 clusters
-    
+
     # Check cluster structure
     for c in clusters:
         assert "id" in c
@@ -148,6 +162,7 @@ def test_analyze_cluster_quality(tmp_path, monkeypatch):
 def test_analyze_mapbox_downsample(tmp_path, monkeypatch):
     """Test that large datasets are handled (Mapbox optimization check)."""
     import src.analyze as analyze_module
+
     monkeypatch.setattr(analyze_module, "BASE", tmp_path)
 
     data_raw = tmp_path / "data" / "raw"
@@ -155,11 +170,14 @@ def test_analyze_mapbox_downsample(tmp_path, monkeypatch):
 
     # Create 10000 points (large dataset)
     import numpy as np
+
     np.random.seed(42)
-    coords_data = pd.DataFrame({
-        "lat": np.random.uniform(-33.5, -33.4, 10000),
-        "lon": np.random.uniform(-70.7, -70.6, 10000),
-    })
+    coords_data = pd.DataFrame(
+        {
+            "lat": np.random.uniform(-33.5, -33.4, 10000),
+            "lon": np.random.uniform(-70.7, -70.6, 10000),
+        }
+    )
     coords_data.to_csv(data_raw / "coordinates.csv", index=False)
 
     result = analyze()
