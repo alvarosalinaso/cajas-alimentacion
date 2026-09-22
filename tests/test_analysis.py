@@ -82,3 +82,23 @@ def test_delivery_analysis_csv_columns(analysis_df):
 
 def test_total_deliveries(stats):
     assert stats["total_deliveries"] == 80595
+
+
+def test_centroids_exported_in_wgs84_santiago_bounds():
+    """A8: centroides inversos a WGS84 dentro del AM de Santiago."""
+    if not RAW_CSV.exists():
+        pytest.skip("coordinates.csv not found")
+    result = analyze()
+    assert result is not None
+    for c in result["clusters"]:
+        assert -33.9 <= c["centroid_lat"] <= -33.0
+        assert -71.3 <= c["centroid_lon"] <= -70.3
+
+
+def test_cluster_metrics_reproducible():
+    """A8: muestra con semilla fija -> métricas idénticas entre corridas."""
+    if not RAW_CSV.exists():
+        pytest.skip("coordinates.csv not found")
+    m1 = analyze()["cluster_metrics"]
+    m2 = analyze()["cluster_metrics"]
+    assert m1 == m2
