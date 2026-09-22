@@ -135,33 +135,6 @@ def kpi_box(value, label, color, trend=None, delta=None):
     )
 
 
-def sparkline(values, color="#ff0000"):
-    if not values or len(values) < 2:
-        return html.Div(style={"height": "32px"})
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        y=list(values), mode="lines",
-        line={"color": color, "width": 3, "shape": "spline"},
-        fill="tozeroy", hoverinfo="skip", showlegend=False,
-    ))
-    fig.update_layout(
-        margin={"t": 0, "b": 0, "l": 0, "r": 0},
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        xaxis={"visible": False}, yaxis={"visible": False}, height=32,
-    )
-    return dcc.Graph(figure=fig, config={"displayModeBar": False}, style={"height": "32px"})
-
-
-def insight_card(question, answer, accent="#ff0000"):
-    return html.Div(
-        style={"backgroundColor": "#ffffff", "border": "4px solid #000000", "borderLeft": f"10px solid {accent}", "padding": "14px 16px", "marginBottom": "12px"},
-        children=[
-            html.Div(question, style={"fontWeight": "900", "textTransform": "uppercase", "fontSize": "0.75rem", "letterSpacing": "0.06em", "fontFamily": FONT}),
-            html.Div(answer, style={"marginTop": "4px", "fontFamily": FONT, "lineHeight": "1.5"}),
-        ],
-    )
-
-
 def sparkline(values, color="#56B4E9"):
     if not values or len(values) < 2:
         return html.Div(style={"height": "32px"})
