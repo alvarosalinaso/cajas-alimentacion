@@ -20,8 +20,15 @@ def analyze() -> dict[str, Any] | None:
     df = pd.read_csv(csv_path)
     n_clusters = max(1, min(10, len(df) // 100))
 
+    # A8: clustering por distancia métrica — equirectangular (lon escalado por
+    # cos(lat)), equivalente a UTM 19S a escala de ciudad sin dependencias nuevas.
+    # Los centroides se devuelven inversos en WGS84 (grados) para el dashboard.
+    lat0 = float(df["lat"].mean())
+    lon_scale = float(np.cos(np.deg2rad(lat0)))
+    coords_proj = np.column_stack([df["lon"].to_numpy() * lon_scale, df["lat"]])
+
     kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-    df["cluster"] = kmeans.fit_predict(df[["lat", "lon"]])
+    df["cluster"] = kmeans.fit_predict(coords_proj)
 
     grid_size = 0.01
     df["grid_lat"] = (df["lat"] / grid_size).round().astype(int)
@@ -34,13 +41,14 @@ def analyze() -> dict[str, Any] | None:
 
     centroids = []
     for c in range(n_clusters):
-        cluster_df = df[df["cluster"] == c]
+        cx, cy = kmeans.cluster_centers_[c]
         centroids.append(
             {
                 "id": c,
-                "centroid_lat": round(float(cluster_df["lat"].mean()), 6),
-                "centroid_lon": round(float(cluster_df["lon"].mean()), 6),
-                "count": len(cluster_df),
+                # Inversa equirectangular -> WGS84 (grados)
+                "centroid_lat": round(float(cy), 6),
+                "centroid_lon": round(float(cx / lon_scale), 6),
+                "count": int((df["cluster"] == c).sum()),
             }
         )
 
@@ -48,15 +56,17 @@ def analyze() -> dict[str, Any] | None:
     cluster_metrics = {}
     if n_clusters > 1 and len(df) > n_clusters:
         try:
-            coords = df[["lat", "lon"]].values
             labels = df["cluster"].values
             # Use sample for metrics on large datasets for performance
             if len(df) > 5000:
-                sample_idx = np.random.choice(len(df), 5000, replace=False)
-                coords_sample = coords[sample_idx]
+                # A8: semilla fija -> métricas reproducibles
+                sample_idx = np.random.default_rng(42).choice(
+                    len(df), 5000, replace=False
+                )
+                coords_sample = coords_proj[sample_idx]
                 labels_sample = labels[sample_idx]
             else:
-                coords_sample = coords
+                coords_sample = coords_proj
                 labels_sample = labels
             cluster_metrics["silhouette_score"] = round(
                 silhouette_score(coords_sample, labels_sample), 4
