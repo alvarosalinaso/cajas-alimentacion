@@ -16,17 +16,21 @@ app = dash.Dash(
 )
 server = app.server
 
+# Legado Haring re-mapeado a data-art oscuro (nombres intactos para no tocar llamadas).
 HARING_COLORS = {
-    "white": "#ffffff",
-    "red": "#ff0000",
-    "yellow": "#ffdd00",
-    "blue": "#0066ff",
-    "green": "#00cc44",
-    "black": "#000000",
+    "white": "#e8edf2",
+    "red": "#f472b6",
+    "yellow": "#F0E442",
+    "blue": "#56B4E9",
+    "green": "#009E73",
+    "black": "#0a0e14",
 }
-KPI_PALETTE = [HARING_COLORS["red"], HARING_COLORS["blue"], HARING_COLORS["yellow"], HARING_COLORS["green"]]
-CHART_COLORS = [HARING_COLORS["red"], HARING_COLORS["blue"], HARING_COLORS["yellow"], HARING_COLORS["green"],
-                "#ff6600", "#cc00cc"]
+# Okabe-Ito (2008), ordenado para dark: categórico colorblind-safe.
+# Reemplaza la paleta Haring (no apta para codificar datos).
+OKABE_ITO_DARK = ["#56B4E9", "#E69F00", "#009E73", "#F0E442",
+                  "#CC79A7", "#D55E00", "#0072B2", "#999999"]
+KPI_PALETTE = OKABE_ITO_DARK[:4]
+CHART_COLORS = OKABE_ITO_DARK
 
 BASE = Path(__file__).parent
 RAW_CSV = BASE / "data" / "raw" / "coordinates.csv"
@@ -49,70 +53,84 @@ def load_data():
 
 DATA = load_data()
 
-FONT = "'Arial Rounded MT Bold', 'Arial', sans-serif"
+FONT = "'Inter','Segoe UI',system-ui,sans-serif"
+FONT_DATA = "'JetBrains Mono',Consolas,'Courier New',monospace"
+BG = "#0a0e14"
+CARD = "#11161f"
+HAIRLINE = "1px solid rgba(255,255,255,0.08)"
+INK = "#e8edf2"
+MUTED = "#8b94a3"
+
+CHART_TEMPLATE = dict(
+    template="plotly_dark",
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="Inter,Segoe UI,sans-serif", color="#e8edf2", size=13),
+    xaxis=dict(gridcolor="rgba(255,255,255,0.06)", zerolinecolor="rgba(255,255,255,0.12)",
+               title=dict(font=dict(size=13)), tickfont=dict(family="JetBrains Mono,monospace", size=12)),
+    yaxis=dict(gridcolor="rgba(255,255,255,0.06)", zerolinecolor="rgba(255,255,255,0.12)",
+               title=dict(font=dict(size=13)), tickfont=dict(family="JetBrains Mono,monospace", size=12)),
+    legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)"),
+)
 
 
 def haring_card(title, children):
     child_list = children if isinstance(children, list) else [children]
     return html.Div(
         style={
-            "backgroundColor": HARING_COLORS["white"],
-            "borderRadius": "12px",
-            "padding": "25px",
-            "marginBottom": "25px",
-            "border": f"4px solid {HARING_COLORS['black']}",
+            "backgroundColor": CARD,
+            "borderRadius": "14px",
+            "padding": "22px",
+            "marginBottom": "22px",
+            "border": HAIRLINE,
+            "boxShadow": "0 8px 32px rgba(0,0,0,0.35)",
         },
         children=[
             html.H3(title, style={
-                "color": HARING_COLORS["black"],
-                "fontSize": "1.4rem",
-                "fontWeight": "900",
+                "color": INK,
+                "fontSize": "1.15rem",
+                "fontWeight": "700",
                 "fontFamily": FONT,
-                "marginBottom": "15px",
-                "paddingBottom": "10px",
-                "borderBottom": f"3px solid {HARING_COLORS['black']}",
+                "margin": "0 0 4px 0",
+            }),
+            html.Div("insights · metodología · decisión", style={
+                "color": MUTED, "fontSize": "0.75rem",
+                "fontFamily": FONT_DATA, "marginBottom": "12px",
             }),
         ] + child_list,
     )
 
 
-def kpi_box(value, label, color):
+def kpi_box(value, label, color, trend=None, delta=None):
     return html.Div(
         style={
             "flex": "1",
             "minWidth": "150px",
-            "backgroundColor": HARING_COLORS["white"],
-            "borderRadius": "10px",
-            "padding": "24px 16px",
+            "backgroundColor": CARD,
+            "borderRadius": "12px",
+            "padding": "18px 14px",
             "textAlign": "center",
-            "border": f"4px solid {HARING_COLORS['black']}",
-            "position": "relative",
-            "overflow": "hidden",
+            "border": HAIRLINE,
+            "borderTop": f"3px solid {color}",
         },
         children=[
-            html.Div("●", style={
-                "position": "absolute", "top": "8px", "right": "10px",
-                "fontSize": "1.2rem", "color": color,
-            }),
-            html.Div("✦", style={
-                "position": "absolute", "bottom": "8px", "left": "10px",
-                "fontSize": "1rem", "color": color,
-            }),
             html.Div(str(value), style={
-                "fontSize": "3.2rem",
-                "fontWeight": "900",
-                "color": color,
-                "fontFamily": FONT,
+                "fontSize": "2rem",
+                "fontWeight": "800",
+                "color": INK,
+                "fontFamily": FONT_DATA,
                 "lineHeight": "1.1",
             }),
             html.Div(label, style={
-                "fontSize": "0.85rem",
-                "color": HARING_COLORS["black"],
+                "fontSize": "0.78rem",
+                "color": MUTED,
                 "marginTop": "6px",
-                "fontWeight": "700",
                 "fontFamily": FONT,
-                "textTransform": "uppercase",
             }),
+            sparkline(trend or [], color=color),
+            html.Div(delta or "", title="Variación vs periodo anterior",
+                     style={"fontSize": "0.78rem", "fontWeight": "700", "color": color,
+                            "marginTop": "4px", "fontFamily": FONT_DATA}),
         ],
     )
 
@@ -144,12 +162,46 @@ def insight_card(question, answer, accent="#ff0000"):
     )
 
 
-def stat_row(stats):
+def sparkline(values, color="#56B4E9"):
+    if not values or len(values) < 2:
+        return html.Div(style={"height": "32px"})
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        y=list(values), mode="lines",
+        line={"color": color, "width": 2.5, "shape": "spline"},
+        fill="tozeroy", hoverinfo="skip", showlegend=False,
+    ))
+    fig.update_layout(
+        margin={"t": 0, "b": 0, "l": 0, "r": 0},
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        xaxis={"visible": False}, yaxis={"visible": False}, height=32,
+    )
+    return dcc.Graph(figure=fig, config={"displayModeBar": False}, style={"height": "32px"})
+
+
+def insight_card(question, answer, accent="#56B4E9"):
     return html.Div(
-        style={"display": "flex", "gap": "16px", "flexWrap": "wrap", "marginBottom": "25px"},
+        style={"backgroundColor": CARD, "border": HAIRLINE, "borderLeft": f"3px solid {accent}",
+               "borderRadius": "10px", "padding": "14px 16px", "marginBottom": "12px"},
         children=[
-            kpi_box(val, label, color)
-            for val, label, color in stats
+            html.Div(question, style={"fontWeight": "700", "fontSize": "0.75rem", "letterSpacing": "0.08em",
+                                      "textTransform": "uppercase", "color": accent, "fontFamily": FONT}),
+            html.Div(answer, style={"marginTop": "4px", "color": INK, "lineHeight": "1.55", "fontSize": "0.92rem"}),
+        ],
+    )
+
+
+def stat_row(stats):
+    def _norm(item):
+        if len(item) == 5:
+            return item
+        val, label, color = item
+        return (val, label, color, None, None)
+    return html.Div(
+        style={"display": "flex", "gap": "14px", "flexWrap": "wrap", "marginBottom": "22px"},
+        children=[
+            kpi_box(val, label, color, trend, delta)
+            for val, label, color, trend, delta in [_norm(item) for item in stats]
         ],
     )
 
@@ -157,98 +209,101 @@ def stat_row(stats):
 def tab_style():
     return {
         "style": {
-            "backgroundColor": HARING_COLORS["white"],
-            "color": HARING_COLORS["black"],
-            "border": f"3px solid {HARING_COLORS['black']}",
-            "borderRadius": "6px",
-            "fontWeight": "800",
+            "backgroundColor": "transparent",
+            "color": MUTED,
+            "border": "none",
+            "borderBottom": "2px solid transparent",
+            "fontWeight": "600",
             "fontFamily": FONT,
-            "textTransform": "uppercase",
-            "letterSpacing": "0.5px",
-            "margin": "4px",
+            "fontSize": "0.85rem",
+            "letterSpacing": "0.04em",
+            "padding": "14px 20px",
         },
         "selected_style": {
-            "backgroundColor": HARING_COLORS["yellow"],
-            "color": HARING_COLORS["black"],
-            "border": f"3px solid {HARING_COLORS['black']}",
-            "borderRadius": "6px",
-            "fontWeight": "800",
+            "backgroundColor": "transparent",
+            "color": INK,
+            "border": "none",
+            "borderBottom": "2px solid #22d3ee",
+            "fontWeight": "700",
             "fontFamily": FONT,
-            "textTransform": "uppercase",
-            "letterSpacing": "0.5px",
-            "margin": "4px",
+            "fontSize": "0.85rem",
+            "letterSpacing": "0.04em",
+            "padding": "14px 20px",
         },
     }
 
 
+DATA_CANVAS_SVG = (
+    "data:image/svg+xml,"
+    "%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='110' viewBox='0 0 1200 110'%3E"
+    "%3Crect width='1200' height='110' fill='%230a0e14'/%3E"
+    "%3Cg fill='%2322d3ee' opacity='0.16'%3E"
+    + "".join(f"%3Ccircle cx='{x}' cy='{y}' r='2'/%3E" for x in range(30, 1200, 60) for y in range(20, 110, 30)) +
+    "%3C/g%3E%3Cg fill='none' stroke='%23E69F00' stroke-width='2' opacity='0.7'%3E"
+    "%3Cpath d='M0,85 Q200,40 400,65 T800,35 T1200,60'/%3E%3C/g%3E"
+    "%3C/svg%3E"
+)
+
+
 app.layout = html.Div(
     style={
-        "backgroundColor": HARING_COLORS["white"],
+        "backgroundColor": BG,
         "minHeight": "100vh",
         "fontFamily": FONT,
-        "color": HARING_COLORS["black"],
+        "color": INK,
     },
     children=[
         html.Div(
             style={
-                "background": HARING_COLORS["white"],
-                "padding": "32px 20px",
+                "padding": "44px 20px 32px 20px",
                 "textAlign": "center",
-                "borderBottom": f"4px solid {HARING_COLORS['black']}",
+                "borderBottom": "1px solid rgba(255,255,255,0.08)",
             },
             children=[
                 html.Div(
-                    style={
-                        "display": "flex",
-                        "justifyContent": "center",
-                        "gap": "0",
-                        "marginBottom": "12px",
-                    },
-                    children=[
-                        html.Div(style={"height": "8px", "width": "80px", "backgroundColor": HARING_COLORS["red"]}),
-                        html.Div(style={"height": "8px", "width": "80px", "backgroundColor": HARING_COLORS["yellow"]}),
-                        html.Div(style={"height": "8px", "width": "80px", "backgroundColor": HARING_COLORS["blue"]}),
-                    ],
+                    "PORTFOLIO · DATA ART",
+                    style={"display": "inlineBlock", "color": "#22d3ee", "fontWeight": "700",
+                           "letterSpacing": "0.28em", "fontSize": "0.7rem", "fontFamily": FONT_DATA,
+                           "padding": "6px 0", "marginBottom": "10px",
+                           "borderBottom": "1px solid rgba(34,211,238,0.4)"},
                 ),
-                html.H1("CAJAS DE ALIMENTACIÓN", style={
-                    "fontSize": "2.8rem",
-                    "fontWeight": "900",
-                    "color": HARING_COLORS["black"],
+                html.H1("Cajas de Alimentación", style={
+                    "fontSize": "2.4rem",
+                    "fontWeight": "800",
+                    "color": INK,
                     "margin": "0",
                     "fontFamily": FONT,
-                    "letterSpacing": "3px",
-                    "textTransform": "uppercase",
+                    "letterSpacing": "-0.01em",
                 }),
                 html.P(id="header-stats", style={
-                    "color": HARING_COLORS["black"],
-                    "marginTop": "10px",
-                    "fontSize": "1.1rem",
-                    "fontWeight": "700",
-                    "fontFamily": FONT,
+                    "color": MUTED,
+                    "marginTop": "8px",
+                    "fontSize": "1rem",
+                    "fontFamily": FONT_DATA,
                 }),
-                html.Div(style={"display": "flex", "justifyContent": "center", "gap": "10px", "marginTop": "12px"}, children=[
-                    html.Div(style={"width": "44px", "height": "44px", "borderRadius": "50%", "backgroundColor": HARING_COLORS["red"], "border": f"3px solid {HARING_COLORS['black']}"}),
-                    html.Div(style={"width": "44px", "height": "44px", "backgroundColor": HARING_COLORS["blue"], "border": f"3px solid {HARING_COLORS['black']}"}),
-                    html.Div(style={"width": "0", "height": "0", "borderLeft": "26px solid transparent", "borderRight": "26px solid transparent", "borderBottom": f"44px solid {HARING_COLORS['yellow']}"}),
-                ]),
             ],
         ),
+        html.Div(style={
+            "backgroundImage": f"url(\"{DATA_CANVAS_SVG}\")",
+            "backgroundSize": "cover", "backgroundPosition": "center",
+            "height": "110px", "borderBottom": "1px solid rgba(255,255,255,0.08)",
+        }),
         dcc.Tabs(
             id="tabs",
             value="map",
             style={
-                "backgroundColor": HARING_COLORS["white"],
-                "borderBottom": f"4px solid {HARING_COLORS['black']}",
-                "padding": "8px 20px",
+                "backgroundColor": "transparent",
+                "borderBottom": "1px solid rgba(255,255,255,0.08)",
+                "padding": "0 20px",
             },
             children=[
-                dcc.Tab(label="● MAPA", value="map", **tab_style()),
-                dcc.Tab(label="★ DENSIDAD", value="density", **tab_style()),
-                dcc.Tab(label="■ CLUSTERS", value="clusters", **tab_style()),
-                dcc.Tab(label="✦ ESTADÍSTICAS", value="stats", **tab_style()),
+                dcc.Tab(label="Mapa", value="map", **tab_style()),
+                dcc.Tab(label="Densidad", value="density", **tab_style()),
+                dcc.Tab(label="Clusters", value="clusters", **tab_style()),
+                dcc.Tab(label="Estadísticas", value="stats", **tab_style()),
             ],
         ),
-        html.Div(id="tab-content", style={"maxWidth": "1200px", "margin": "0 auto", "padding": "30px 20px"}),
+        html.Div(id="tab-content", style={"maxWidth": "1200px", "margin": "0 auto", "padding": "24px 20px"}),
     ],
 )
 
@@ -284,12 +339,12 @@ def map_tab():
         color_discrete_sequence=CHART_COLORS,
     )
     fig.update_layout(
-        template="plotly_white",
-        paper_bgcolor=HARING_COLORS["white"],
-        plot_bgcolor=HARING_COLORS["white"],
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         height=600,
         margin=dict(t=0, b=0),
-        font=dict(family=FONT, color=HARING_COLORS["black"], size=14),
+        font=dict(family=FONT, color=INK, size=14),
     )
     fig.update_traces(
         marker=dict(size=6),
@@ -308,16 +363,16 @@ def map_tab():
             text=[c] * len(cdf),
         ))
     fig3d.update_layout(
-        template="plotly_white",
-        paper_bgcolor=HARING_COLORS["white"],
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
         height=600,
-        font=dict(family=FONT, color=HARING_COLORS["black"]),
+        font=dict(family=FONT, color=INK),
         title="PAISAJE 3D — gira, acerca y rota",
         scene=dict(
             xaxis_title="Longitud", yaxis_title="Latitud", zaxis_title="Cluster",
-            xaxis=dict(backgroundcolor=HARING_COLORS["white"], gridcolor="#dddddd"),
-            yaxis=dict(backgroundcolor=HARING_COLORS["white"], gridcolor="#dddddd"),
-            zaxis=dict(backgroundcolor=HARING_COLORS["white"], gridcolor="#dddddd"),
+            xaxis=dict(backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.12)"),
+            yaxis=dict(backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.12)"),
+            zaxis=dict(backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.12)"),
         ),
         legend=dict(orientation="h", y=1.05),
     )
@@ -341,18 +396,18 @@ def density_tab():
         map_style="carto-positron",
         title="MAPA DE DENSIDAD",
         color_continuous_scale=[
-            [0, HARING_COLORS["white"]],
+            [0, "#0a0e14"],
             [0.3, HARING_COLORS["yellow"]],
             [0.6, HARING_COLORS["red"]],
-            [1, HARING_COLORS["black"]],
+            [1, "#F0E442"],
         ],
     )
     fig_density.update_layout(
-        template="plotly_white",
-        paper_bgcolor=HARING_COLORS["white"],
-        plot_bgcolor=HARING_COLORS["white"],
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         height=600,
-        font=dict(family=FONT, color=HARING_COLORS["black"]),
+        font=dict(family=FONT, color=INK),
     )
     if "grid_id" in df.columns:
         grid_counts = df.groupby("grid_id").agg(lat=("lat", "mean"), lon=("lon", "mean"), count=("lat", "count")).reset_index()
@@ -360,17 +415,17 @@ def density_tab():
         fig_bar = px.bar(top_grid, x="grid_id", y="count", title="TOP 10 ZONAS MÁS DENSAS",
                          color_discrete_sequence=[HARING_COLORS["red"]])
         fig_bar.update_layout(
-            template="plotly_white",
-            paper_bgcolor=HARING_COLORS["white"],
-            plot_bgcolor=HARING_COLORS["white"],
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
             height=400,
             xaxis_title="ZONA",
             yaxis_title="PUNTOS",
-            font=dict(family=FONT, color=HARING_COLORS["black"]),
+            font=dict(family=FONT, color=INK),
         )
         fig_bar.update_traces(
             marker_color=HARING_COLORS["red"],
-            marker_line=dict(width=3, color=HARING_COLORS["black"]),
+            marker_line=dict(width=3, color=INK),
         )
     else:
         fig_bar = go.Figure()
@@ -380,23 +435,23 @@ def density_tab():
         title="ARTE DE DENSIDAD — curvas de entrega",
     )
     fig_contour.update_layout(
-        template="plotly_white",
-        paper_bgcolor=HARING_COLORS["white"],
-        plot_bgcolor=HARING_COLORS["white"],
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         height=500,
-        font=dict(family=FONT, color=HARING_COLORS["black"]),
+        font=dict(family=FONT, color=INK),
         xaxis_title="Longitud",
         yaxis_title="Latitud",
     )
     fig_contour.update_traces(
         contours_coloring="fill",
         colorscale=[
-            [0, HARING_COLORS["white"]],
+            [0, "#0a0e14"],
             [0.35, HARING_COLORS["yellow"]],
             [0.65, HARING_COLORS["red"]],
-            [1, HARING_COLORS["black"]],
+            [1, "#F0E442"],
         ],
-        contours=dict(showlabels=True, labelfont=dict(size=11, color=HARING_COLORS["black"])),
+        contours=dict(showlabels=True, labelfont=dict(size=11, color=INK)),
         hovertemplate="Lon: %{x:.4f}<br>Lat: %{y:.4f}<br>Densidad: %{z:.0f}<extra></extra>",
     )
     return html.Div([
@@ -424,13 +479,13 @@ def clusters_tab():
         opacity=0.7,
     )
     fig_scatter.update_layout(
-        template="plotly_white",
-        paper_bgcolor=HARING_COLORS["white"],
-        plot_bgcolor=HARING_COLORS["white"],
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         height=500,
-        font=dict(family=FONT, color=HARING_COLORS["black"]),
+        font=dict(family=FONT, color=INK),
     )
-    fig_scatter.update_traces(marker=dict(size=8, line=dict(width=2, color=HARING_COLORS["black"])))
+    fig_scatter.update_traces(marker=dict(size=8, line=dict(width=2, color=INK)))
     stats = DATA.get("stats", {})
     clusters = stats.get("clusters", [])
     if clusters:
@@ -438,15 +493,15 @@ def clusters_tab():
         fig_bar = px.bar(cdf, x="id", y="count", title="ENTREGAS POR CLUSTER — clic para filtrar",
                          color_discrete_sequence=[HARING_COLORS["blue"]])
         fig_bar.update_layout(
-            template="plotly_white",
-            paper_bgcolor=HARING_COLORS["white"],
-            plot_bgcolor=HARING_COLORS["white"],
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
             height=350,
-            font=dict(family=FONT, color=HARING_COLORS["black"]),
+            font=dict(family=FONT, color=INK),
         )
         fig_bar.update_traces(
             marker_color=HARING_COLORS["blue"],
-            marker_line=dict(width=3, color=HARING_COLORS["black"]),
+            marker_line=dict(width=3, color=INK),
             hovertemplate="<b>Cluster %{x}</b><br>Entregas: %{y}<extra></extra>",
         )
         return html.Div([
@@ -499,14 +554,14 @@ def stats_tab():
             color_discrete_sequence=CHART_COLORS,
         )
         fig_pie.update_layout(
-            template="plotly_white",
-            paper_bgcolor=HARING_COLORS["white"],
-            plot_bgcolor=HARING_COLORS["white"],
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
             height=400,
-            font=dict(family=FONT, color=HARING_COLORS["black"]),
+            font=dict(family=FONT, color=INK),
         )
         fig_pie.update_traces(
-            marker=dict(line=dict(width=4, color=HARING_COLORS["black"])),
+            marker=dict(line=dict(width=4, color=INK)),
         )
         return html.Div([
             top_stats,
