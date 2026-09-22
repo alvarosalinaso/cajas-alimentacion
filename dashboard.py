@@ -296,6 +296,31 @@ def map_tab():
         hovertemplate="%{lat:.4f}°, %{lon:.4f}°<br>" + f"{len(df):,} puntos totales<extra></extra>",
     )
     top_cluster = int(df["cluster"].value_counts().index[0]) if "cluster" in df.columns and len(df) else 0
+    sample3d = df.sample(n=min(4000, len(df)), random_state=11) if len(df) > 4000 else df
+    fig3d = go.Figure()
+    for c in sorted(sample3d["cluster"].unique()) if "cluster" in sample3d.columns else [0]:
+        cdf = sample3d[sample3d["cluster"] == c] if "cluster" in sample3d.columns else sample3d
+        fig3d.add_trace(go.Scatter3d(
+            x=cdf["lon"], y=cdf["lat"], z=[c] * len(cdf),
+            mode="markers", name=f"Cluster {c}",
+            marker=dict(size=3, opacity=0.7),
+            hovertemplate="Cluster %{text}<br>Lon: %{x:.4f}<br>Lat: %{y:.4f}<extra></extra>",
+            text=[c] * len(cdf),
+        ))
+    fig3d.update_layout(
+        template="plotly_white",
+        paper_bgcolor=HARING_COLORS["white"],
+        height=600,
+        font=dict(family=FONT, color=HARING_COLORS["black"]),
+        title="PAISAJE 3D — gira, acerca y rota",
+        scene=dict(
+            xaxis_title="Longitud", yaxis_title="Latitud", zaxis_title="Cluster",
+            xaxis=dict(backgroundcolor=HARING_COLORS["white"], gridcolor="#dddddd"),
+            yaxis=dict(backgroundcolor=HARING_COLORS["white"], gridcolor="#dddddd"),
+            zaxis=dict(backgroundcolor=HARING_COLORS["white"], gridcolor="#dddddd"),
+        ),
+        legend=dict(orientation="h", y=1.05),
+    )
     return html.Div(children=[
         haring_card("KEY INSIGHTS", html.Div(children=[
             insight_card("¿Problema?", f"{len(df):,} entregas sin zonificación visible para rutas.", HARING_COLORS["red"]),
@@ -304,6 +329,7 @@ def map_tab():
             sparkline(df["cluster"].value_counts().sort_index().values.tolist(), HARING_COLORS["red"]),
         ])),
         haring_card("MAPA DE ENTREGAS", dcc.Graph(figure=fig)),
+        haring_card("PAISAJE 3D — arrastra para rotar", dcc.Graph(figure=fig3d)),
     ])
 
 
