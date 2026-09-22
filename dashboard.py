@@ -427,9 +427,15 @@ def density_tab():
         contours=dict(showlabels=True, labelfont=dict(size=11, color=INK)),
         hovertemplate="Lon: %{x:.4f}<br>Lat: %{y:.4f}<br>Densidad: %{z:.0f}<extra></extra>",
     )
+    fig_bar.update_traces(
+        hovertemplate="Zona: %{x}<br>Puntos: %{y}<extra>Clic para filtrar</extra>",
+    )
     return html.Div([
         haring_card("MAPA DE DENSIDAD", dcc.Graph(figure=fig_density)),
-        haring_card("TOP 10 ZONAS", dcc.Graph(figure=fig_bar)),
+        haring_card("TOP 10 ZONAS — clic para filtrar", html.Div(children=[
+            dcc.Graph(id="density-top10-bar", figure=fig_bar),
+            html.Div(id="density-crossfilter-output", style={"marginTop": "8px", "fontWeight": "700", "fontFamily": FONT}),
+        ])),
         haring_card("DENSIDAD COMO ARTE — contornos", html.Div(children=[
             dcc.Graph(figure=fig_contour),
             html.Div("Insight: los anillos concéntricos marcan los focos donde se acumula la demanda; ahí van las rutas prioritarias.",
@@ -499,6 +505,18 @@ def cluster_crossfilter(click):
     return f"Cluster seleccionado: {c} — usa el tab Mapa con ese cluster para planificar rutas."
 
 
+@callback(
+    Output("density-crossfilter-output", "children"),
+    Input("density-top10-bar", "clickData"),
+    prevent_initial_call=True,
+)
+def density_crossfilter(click):
+    if not click:
+        return no_update
+    z = click["points"][0].get("x", "?")
+    return f"Zona seleccionada: {z} — ver sus puntos en el Mapa y su cluster."
+
+
 def stats_tab():
     stats = DATA.get("stats", {})
     if not stats:
@@ -535,12 +553,28 @@ def stats_tab():
         )
         fig_pie.update_traces(
             marker=dict(line=dict(width=4, color=INK)),
+            hovertemplate="<b>%{label}</b><br>Entregas: %{value}<br>%{percent}<extra>Clic para filtrar</extra>",
         )
         return html.Div([
             top_stats,
-            haring_card("DISTRIBUCIÓN POR CLUSTER", dcc.Graph(figure=fig_pie)),
+            haring_card("DISTRIBUCIÓN POR CLUSTER — clic para filtrar", html.Div(children=[
+                dcc.Graph(id="stats-cluster-pie", figure=fig_pie),
+                html.Div(id="stats-crossfilter-output", style={"marginTop": "8px", "fontWeight": "700", "fontFamily": FONT}),
+            ])),
         ])
     return html.Div([top_stats])
+
+
+@callback(
+    Output("stats-crossfilter-output", "children"),
+    Input("stats-cluster-pie", "clickData"),
+    prevent_initial_call=True,
+)
+def stats_crossfilter(click):
+    if not click:
+        return no_update
+    label = click["points"][0].get("label", "?")
+    return f"Seleccionado: {label} — ver su zona en Clusters y Densidad."
 
 
 if __name__ == "__main__":
