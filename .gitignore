@@ -6,3 +6,6 @@ data/processed/
 data/raw/
 *.egg-info/
 .pytest_cache/
+.coverage
+coverage.xml
+htmlcov/

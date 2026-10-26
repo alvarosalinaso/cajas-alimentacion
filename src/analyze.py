@@ -20,7 +20,7 @@ def analyze() -> dict[str, Any] | None:
     df = pd.read_csv(csv_path)
     n_clusters = max(1, min(10, len(df) // 100))
 
-    # A8: clustering por distancia métrica — equirectangular (lon escalado por
+    # A8: clustering por distancia métrica, equirectangular (lon escalado por
     # cos(lat)), equivalente a UTM 19S a escala de ciudad sin dependencias nuevas.
     # Los centroides se devuelven inversos en WGS84 (grados) para el dashboard.
     lat0 = float(df["lat"].mean())

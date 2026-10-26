@@ -1,4 +1,4 @@
-"""Dash Dashboard: Cajas de Alimentación — Santiago."""
+"""Dash Dashboard: Cajas de Alimentación, Santiago."""
 
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ from dash import Input, Output, callback, dcc, html, no_update
 
 app = dash.Dash(
     __name__,
-    title="Cajas de Alimentación — Santiago",
+    title="Cajas de Alimentación, Santiago",
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
 )
 server = app.server
@@ -409,7 +409,7 @@ def update_header_stats(_tab):
         return "Sin datos"
     df = DATA.get("analysis", DATA["raw"])
     total = len(df)
-    return f"✦ {total:,} puntos de entrega — Santiago ✦"
+    return f"✦ {total:,} puntos de entrega, Santiago ✦"
 
 
 def map_tab():
@@ -428,7 +428,7 @@ def map_tab():
         center={"lat": -33.45, "lon": -70.66},
         zoom=11,
         map_style="carto-positron",
-        title=f"MAPA DE ENTREGAS — {len(df):,} PUNTOS (mostrando {len(display_df):,})",
+        title=f"MAPA DE ENTREGAS, {len(df):,} PUNTOS (mostrando {len(display_df):,})",
         color_discrete_sequence=CHART_COLORS,
     )
     fig.update_layout(
@@ -478,7 +478,7 @@ def map_tab():
         paper_bgcolor="rgba(0,0,0,0)",
         height=600,
         font=dict(family=FONT, color=INK),
-        title="PAISAJE 3D — gira, acerca y rota",
+        title="PAISAJE 3D, gira, acerca y rota",
         scene=dict(
             xaxis_title="Longitud",
             yaxis_title="Latitud",
@@ -524,7 +524,7 @@ def map_tab():
                 ),
             ),
             haring_card("MAPA DE ENTREGAS", dcc.Graph(figure=fig)),
-            haring_card("PAISAJE 3D — arrastra para rotar", dcc.Graph(figure=fig3d)),
+            haring_card("PAISAJE 3D, arrastra para rotar", dcc.Graph(figure=fig3d)),
         ]
     )
 
@@ -588,7 +588,7 @@ def density_tab():
         sample,
         x="lon",
         y="lat",
-        title="ARTE DE DENSIDAD — curvas de entrega",
+        title="ARTE DE DENSIDAD, curvas de entrega",
     )
     fig_contour.update_layout(
         template="plotly_dark",
@@ -617,7 +617,7 @@ def density_tab():
         [
             haring_card("MAPA DE DENSIDAD", dcc.Graph(figure=fig_density)),
             haring_card(
-                "TOP 10 ZONAS — clic para filtrar",
+                "TOP 10 ZONAS, clic para filtrar",
                 html.Div(
                     children=[
                         dcc.Graph(id="density-top10-bar", figure=fig_bar),
@@ -633,7 +633,7 @@ def density_tab():
                 ),
             ),
             haring_card(
-                "DENSIDAD COMO ARTE — contornos",
+                "DENSIDAD COMO ARTE, contornos",
                 html.Div(
                     children=[
                         dcc.Graph(figure=fig_contour),
@@ -687,7 +687,7 @@ def clusters_tab():
             cdf,
             x="id",
             y="count",
-            title="ENTREGAS POR CLUSTER — clic para filtrar",
+            title="ENTREGAS POR CLUSTER, clic para filtrar",
             color_discrete_sequence=[HARING_COLORS["blue"]],
         )
         fig_bar.update_layout(
@@ -735,7 +735,7 @@ def cluster_crossfilter(click):
     if not click:
         return no_update
     c = click["points"][0].get("x", "?")
-    return f"Cluster seleccionado: {c} — usa el tab Mapa con ese cluster para planificar rutas."
+    return f"Cluster seleccionado: {c}, usa el tab Mapa con ese cluster para planificar rutas."
 
 
 @callback(
@@ -747,7 +747,7 @@ def density_crossfilter(click):
     if not click:
         return no_update
     z = click["points"][0].get("x", "?")
-    return f"Zona seleccionada: {z} — ver sus puntos en el Mapa y su cluster."
+    return f"Zona seleccionada: {z}, ver sus puntos en el Mapa y su cluster."
 
 
 def stats_tab():
@@ -798,7 +798,7 @@ def stats_tab():
             [
                 top_stats,
                 haring_card(
-                    "DISTRIBUCIÓN POR CLUSTER — clic para filtrar",
+                    "DISTRIBUCIÓN POR CLUSTER, clic para filtrar",
                     html.Div(
                         children=[
                             dcc.Graph(id="stats-cluster-pie", figure=fig_pie),
@@ -827,7 +827,7 @@ def stats_crossfilter(click):
     if not click:
         return no_update
     label = click["points"][0].get("label", "?")
-    return f"Seleccionado: {label} — ver su zona en Clusters y Densidad."
+    return f"Seleccionado: {label}, ver su zona en Clusters y Densidad."
 
 
 if __name__ == "__main__":

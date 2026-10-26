@@ -1,4 +1,4 @@
-# Cajas de Alimentación — Santiago
+# Cajas de Alimentación, Santiago
 
 Análisis espacial de 80,595 puntos de entrega de cajas de alimentación en Santiago de Chile. El proyecto aplica clustering K-Means, análisis de densidad por grilla y un dashboard interactivo en Dash para explorar la distribución geográfica del programa de asistencia alimentaria del gobierno chileno.
 
@@ -26,10 +26,10 @@ Datos georreferenciados del programa **Cajas de Alimentación** del gobierno de 
 
 El pipeline de análisis realiza cuatro operaciones principales:
 
-1. **Clustering K-Means** — Agrupa los 80,595 puntos en 10 clusters geográficos con `scikit-learn`
-2. **Grilla de densidad** — Divide el mapa en celdas de 0.01° × 0.01° y cuenta puntos por celda
-3. **Exportación** — Genera `delivery_analysis.csv` y `delivery_stats.json`
-4. **Dashboard interactivo** — Aplicación Dash con 4 pestañas para explorar los resultados
+1. **Clustering K-Means**, Agrupa los 80,595 puntos en 10 clusters geográficos con `scikit-learn`
+2. **Grilla de densidad**, Divide el mapa en celdas de 0.01° × 0.01° y cuenta puntos por celda
+3. **Exportación**, Genera `delivery_analysis.csv` y `delivery_stats.json`
+4. **Dashboard interactivo**, Aplicación Dash con 4 pestañas para explorar los resultados
 
 ---
 
@@ -82,8 +82,8 @@ cajas-alimentacion/
 ## Tech stack
 
 - **Python 3.10+**
-- **pandas** — Manipulación de datos
-- **scikit-learn** — K-Means clustering
-- **plotly** — Visualizaciones interactivas
-- **dash** — Dashboard web
-- **numpy** — Operaciones numéricas
+- **pandas**, Manipulación de datos
+- **scikit-learn**, K-Means clustering
+- **plotly**, Visualizaciones interactivas
+- **dash**, Dashboard web
+- **numpy**, Operaciones numéricas
