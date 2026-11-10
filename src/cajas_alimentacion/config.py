@@ -14,6 +14,7 @@ from typing import Final
 ENV_ROOT: Final[str] = "CAJAS_ROOT"
 
 RAW_FILE: Final[str] = "coordinates.csv"
+SAMPLE_FILE: Final[str] = "sample_coordinates.csv"
 PROCESSED_FILE: Final[str] = "delivery_analysis.csv"
 STATS_FILE: Final[str] = "delivery_stats.json"
 
@@ -49,6 +50,16 @@ class ProjectPaths:
     @property
     def raw_csv(self) -> Path:
         return self.root / "data" / "raw" / RAW_FILE
+
+    @property
+    def sample_csv(self) -> Path:
+        """Muestra sintética versionada (sin domicilios reales) para demo y CI."""
+        return self.root / "data" / "sample" / SAMPLE_FILE
+
+    @property
+    def input_csv(self) -> Path:
+        """Datos reales si existen (entorno privado); si no, la muestra sintética."""
+        return self.raw_csv if self.raw_csv.exists() else self.sample_csv
 
     @property
     def processed_csv(self) -> Path:

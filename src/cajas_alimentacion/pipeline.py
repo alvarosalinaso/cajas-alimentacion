@@ -83,7 +83,11 @@ def run(
 ) -> PipelineResult:
     """Ejecuta el pipeline completo."""
     paths = paths or ProjectPaths.default()
-    result = compute(csv_path or paths.raw_csv)
+    source = csv_path or paths.input_csv
+    if source == paths.sample_csv:
+        logger.warning("Sin datos reales: se usa la muestra sintética %s", source)
+        sync_docs = False  # nunca publicar cifras sintéticas en el README
+    result = compute(source)
     result.outputs = write_outputs(result, paths, sync_docs)
     return result
 

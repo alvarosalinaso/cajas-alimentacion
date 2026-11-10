@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 def load_data() -> dict:
     """Calcula los datos con el mismo pipeline que la CLI (sin duplicar lógica)."""
     try:
-        result = pipeline.compute(ProjectPaths.default().raw_csv)
+        result = pipeline.compute(ProjectPaths.default().input_csv)
     except (FileNotFoundError, SchemaError):
         logger.exception("No se pudieron cargar los datos del dashboard")
         return {}

@@ -33,7 +33,7 @@ def load_coordinates(path: Path | None = None) -> pd.DataFrame:
     SchemaError
         Si faltan columnas, hay valores no numéricos, nulos o fuera de rango.
     """
-    csv_path = Path(path) if path is not None else ProjectPaths.default().raw_csv
+    csv_path = Path(path) if path is not None else ProjectPaths.default().input_csv
     if not csv_path.exists():
         logger.error("No existe el archivo de coordenadas: %s", csv_path)
         raise FileNotFoundError(f"No existe {csv_path}")

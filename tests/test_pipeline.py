@@ -102,3 +102,16 @@ def test_main_codigos_de_salida(tmp_path, monkeypatch):
     assert pipeline.main(["--no-sync", "--log-level", "ERROR"]) == 0
     raw.write_text("foo\n1\n", encoding="utf-8")
     assert pipeline.main(["--no-sync"]) == 3
+
+
+def test_fallback_a_muestra_sintetica_no_reescribe_readme(tmp_path, monkeypatch):
+    from scripts.generate_sample import generate
+
+    paths = ProjectPaths(root=tmp_path)
+    paths.sample_csv.parent.mkdir(parents=True)
+    generate(n=300).to_csv(paths.sample_csv, index=False)
+    paths.readme.write_text("<!-- FIND:headline -->x<!-- /FIND:headline -->", encoding="utf-8")
+    assert paths.input_csv == paths.sample_csv
+    result = pipeline.run(paths=paths)
+    assert result.stats["total_deliveries"] == 300
+    assert "x<!--" in paths.readme.read_text(encoding="utf-8")

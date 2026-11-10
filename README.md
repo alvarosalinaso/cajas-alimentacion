@@ -84,7 +84,8 @@ cajas-alimentacion/
 │   ├── exports.py                  # CSV/JSON de salida
 │   ├── reporting.py                # Tablas Markdown y sincronización de marcadores del README
 │   └── pipeline.py                 # Orquestador y CLI: python -m cajas_alimentacion
-├── data/raw/coordinates.csv        # Entrada (NO versionada: puede contener domicilios)
+├── data/raw/coordinates.csv        # Entrada real (NO versionada: puede contener domicilios)
+├── data/sample/                    # Muestra sintética versionada: demo en Render y CI
 └── tests/                          # pytest con coordenadas sintéticas en tmp_path
 ```
 
@@ -109,7 +110,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-render.txt && pip install -e . --no-deps
 ```
 
-**4. Ejecutar** (requiere `data/raw/coordinates.csv` con columnas `lat`, `lon`)
+**4. Ejecutar** (usa `data/raw/coordinates.csv` si existe; si no, la muestra sintética `data/sample/sample_coordinates.csv`, 500 puntos generados con `scripts/generate_sample.py`, que no reescribe el README)
 ```bash
 python -m cajas_alimentacion       # métricas, exports y README
 python dashboard.py                # dashboard en http://localhost:8055
