@@ -6,4 +6,6 @@
     startCommand: gunicorn dashboard:server --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: PYTHON_VERSION
-        value: python-3.11.8
+        value: 3.11.8
+      - key: PYTHONPATH
+        value: src

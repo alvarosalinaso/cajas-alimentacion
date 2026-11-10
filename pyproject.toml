@@ -1,7 +1,51 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cajas_alimentacion"
+version = "1.0.0"
+authors = [{ name = "Álvaro Salinas Ortiz" }]
+description = "Cobertura y zonas de reparto de cajas de alimentación en Santiago de Chile"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "numpy==1.26.4",
+    "pandas==2.2.3",
+    "scikit-learn==1.5.2",
+]
+
+[project.optional-dependencies]
+app = ["plotly==5.24.1", "dash==2.18.2"]
+dev = ["pytest==8.3.4", "pytest-cov==6.0.0", "ruff==0.17.4"]
+
+[project.scripts]
+cajas-alimentacion = "cajas_alimentacion.pipeline:main"
+
+[project.urls]
+Homepage = "https://github.com/alvarosalinaso/cajas-alimentacion"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.ruff]
-target-version = "py39"
-line-length = 88
+line-length = 100
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --cov=cajas_alimentacion --cov=dashboard --cov-report=term-missing --cov-report=xml --cov-fail-under=80"
+testpaths = ["tests"]
+pythonpath = ["."]
