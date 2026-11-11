@@ -1,11 +1,17 @@
+venv/
+.venv/
+.env
 __pycache__/
 *.pyc
-.venv/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+coverage.xml
+.coverage
+htmlcov/
+*.egg-info/
+*.tmp
+# Datos: la entrada (posibles domicilios) y las salidas no se versionan
+data/raw/
 data/export/
 data/processed/
-data/raw/
-*.egg-info/
-.pytest_cache/
-.coverage
-coverage.xml
-htmlcov/

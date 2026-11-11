@@ -1,1 +1,0 @@
-"""cajas-alimentacion package."""

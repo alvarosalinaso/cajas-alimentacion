@@ -1,13 +1,17 @@
 """Dash Dashboard: Cajas de Alimentación, Santiago."""
 
+import logging
 import os
-from pathlib import Path
 
 import dash
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import Input, Output, callback, dcc, html, no_update
+
+from cajas_alimentacion import pipeline
+from cajas_alimentacion.config import ProjectPaths
+from cajas_alimentacion.validator import SchemaError
 
 app = dash.Dash(
     __name__,
@@ -40,24 +44,21 @@ OKABE_ITO_DARK = [
 KPI_PALETTE = OKABE_ITO_DARK[:4]
 CHART_COLORS = OKABE_ITO_DARK
 
-BASE = Path(__file__).parent
-RAW_CSV = BASE / "data" / "raw" / "coordinates.csv"
-ANALYSIS_CSV = BASE / "data" / "processed" / "delivery_analysis.csv"
-STATS_JSON = BASE / "data" / "export" / "delivery_stats.json"
+logger = logging.getLogger(__name__)
 
 
-def load_data():
-    data = {}
-    if RAW_CSV.exists():
-        data["raw"] = pd.read_csv(RAW_CSV)
-    if ANALYSIS_CSV.exists():
-        data["analysis"] = pd.read_csv(ANALYSIS_CSV)
-    if STATS_JSON.exists():
-        import json
-
-        with open(STATS_JSON) as f:
-            data["stats"] = json.load(f)
-    return data
+def load_data() -> dict:
+    """Calcula los datos con el mismo pipeline que la CLI (sin duplicar lógica)."""
+    try:
+        result = pipeline.compute(ProjectPaths.default().input_csv)
+    except (FileNotFoundError, SchemaError):
+        logger.exception("No se pudieron cargar los datos del dashboard")
+        return {}
+    return {
+        "raw": result.analysis[["lat", "lon"]],
+        "analysis": result.analysis,
+        "stats": result.stats,
+    }
 
 
 DATA = load_data()
@@ -197,9 +198,7 @@ def sparkline(values, color="#56B4E9"):
         yaxis={"visible": False},
         height=32,
     )
-    return dcc.Graph(
-        figure=fig, config={"displayModeBar": False}, style={"height": "32px"}
-    )
+    return dcc.Graph(figure=fig, config={"displayModeBar": False}, style={"height": "32px"})
 
 
 def insight_card(question, answer, accent="#56B4E9"):
@@ -414,12 +413,8 @@ def update_header_stats(_tab):
 
 def map_tab():
     df = DATA.get("analysis", DATA["raw"])
-    if "cluster" not in df.columns:
-        df["cluster"] = 0
     # Optimización: downsample para visualización si hay muchos puntos
-    display_df = (
-        df.sample(n=min(15000, len(df)), random_state=42) if len(df) > 15000 else df
-    )
+    display_df = df.sample(n=min(15000, len(df)), random_state=42) if len(df) > 15000 else df
     fig = px.scatter_map(
         display_df,
         lat="lat",
@@ -441,26 +436,15 @@ def map_tab():
     )
     fig.update_traces(
         marker=dict(size=6),
-        hovertemplate="%{lat:.4f}°, %{lon:.4f}°<br>"
-        + f"{len(df):,} puntos totales<extra></extra>",
+        hovertemplate="%{lat:.4f}°, %{lon:.4f}°<br>" + f"{len(df):,} puntos totales<extra></extra>",
     )
     top_cluster = (
-        int(df["cluster"].value_counts().index[0])
-        if "cluster" in df.columns and len(df)
-        else 0
+        int(df["cluster"].value_counts().index[0]) if "cluster" in df.columns and len(df) else 0
     )
-    sample3d = (
-        df.sample(n=min(4000, len(df)), random_state=11) if len(df) > 4000 else df
-    )
+    sample3d = df.sample(n=min(4000, len(df)), random_state=11) if len(df) > 4000 else df
     fig3d = go.Figure()
-    for c in (
-        sorted(sample3d["cluster"].unique()) if "cluster" in sample3d.columns else [0]
-    ):
-        cdf = (
-            sample3d[sample3d["cluster"] == c]
-            if "cluster" in sample3d.columns
-            else sample3d
-        )
+    for c in sorted(sample3d["cluster"].unique()) if "cluster" in sample3d.columns else [0]:
+        cdf = sample3d[sample3d["cluster"] == c] if "cluster" in sample3d.columns else sample3d
         fig3d.add_trace(
             go.Scatter3d(
                 x=cdf["lon"],
@@ -483,15 +467,9 @@ def map_tab():
             xaxis_title="Longitud",
             yaxis_title="Latitud",
             zaxis_title="Cluster",
-            xaxis=dict(
-                backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.12)"
-            ),
-            yaxis=dict(
-                backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.12)"
-            ),
-            zaxis=dict(
-                backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.12)"
-            ),
+            xaxis=dict(backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.12)"),
+            yaxis=dict(backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.12)"),
+            zaxis=dict(backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.12)"),
         ),
         legend=dict(orientation="h", y=1.05),
     )
